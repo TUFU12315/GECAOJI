@@ -57,11 +57,8 @@ struct PID
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 uint8_t ReceiveBuff[1];
-uint8_t TxBuff[4]="Start";
-int i=0;
-extern int j;
-extern int FreqL[];
-extern int FreqR[];
+uint8_t TxBuff[5]="Start";
+
 extern float Freq_CaptureL;
 extern float Freq_CaptureR;
 extern float PWM_Duty;
@@ -163,26 +160,11 @@ int main(void)
 	
   while (1)
   {
-//if (j>=100)
-//	{
-//		printf("LLLLLLLLLLLLL\n");
-//		for(i=0;i<100;i++)
-//		 printf("L: %d\n",FreqL[i]);
-//		
-//		printf("RRRRRRRRRRRRRR\n");
-//		for(i=0;i<100;i++)
-//			printf("R: %d\n",FreqR[i]);
-//		j=0;
-//		HAL_Delay(2000);
-//		HAL_TIM_IC_Start_IT(&htim13,TIM_CHANNEL_1);
-//		HAL_TIM_IC_Start_IT(&htim14,TIM_CHANNEL_1);
-//	}
-	//printf("J=%d\n",j);
+
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
 		
-		//HAL_Delay(400);
   }
   /* USER CODE END 3 */
 
@@ -249,10 +231,9 @@ void SystemClock_Config(void)
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 	if(huart->Instance==USART1)
-		HAL_UART_Transmit(&huart1, "uart1\n",6,10);
+		HAL_UART_Transmit(&huart1, "uart1_RX\n",7,10);
 		//printf("uart");
 }
-void MotorContral();
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
@@ -260,8 +241,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	{
 		//HAL_TIM_IC_Start_IT(&htim13,TIM_CHANNEL_1);
 		//HAL_TIM_IC_Start_IT(&htim14,TIM_CHANNEL_1);
-		
 		//printf("tim3\n");
+		
 		l_speed_err2 = l_speed_err1;
 		l_speed_err1 = l_speed_err0;
 		l_speed_err0 = L_setspeed - Freq_CaptureR;
@@ -299,8 +280,15 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 //		else if (r_out >=htim1.Init.Period)
 //			r_out = htim8.Init.Period;
 			
-		if(l_out<0)l_out=0;
-		if(r_out<0)r_out=0;
+		if(l_out<0)
+			l_out=0;
+		if(r_out<0)
+			r_out=0;
+		if(r_out > htim1.Init.Period)
+			r_out = htim1.Init.Period;
+		if(l_out > htim8.Init.Period)
+			l_out = htim8.Init.Period;
+		
 		__HAL_TIM_SetCompare(&htim1,TIM_CHANNEL_1,l_out);
 		__HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_1,r_out);
 		

@@ -55,9 +55,8 @@ int flage =0;
 float Freq_CaptureL=0.0;
 float Freq_CaptureR=0.0;
 float PWM_Duty=0.0;
-int j=0;
-int FreqL[100];
-int FreqR[100];
+
+
 
 /* USER CODE END 0 */
 
@@ -784,7 +783,7 @@ void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* tim_baseHandle)
 /* USER CODE BEGIN 1 */
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 {
-		if (htim->Instance==TIM14)
+	if (htim->Instance==TIM14)
 	{
 		if(htim->Channel==HAL_TIM_ACTIVE_CHANNEL_1)
 		{
@@ -803,19 +802,19 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 	
 	if(htim->Instance==TIM13)
 	{
-	if(htim->Channel==HAL_TIM_ACTIVE_CHANNEL_1)
-	{
-		Capture_DataL0 = Capture_DataL1;
-		Capture_DataL1 = HAL_TIM_ReadCapturedValue(&htim13,TIM_CHANNEL_1);
-		if (Capture_DataL1<=Capture_DataL0)
+		if(htim->Channel==HAL_TIM_ACTIVE_CHANNEL_1)
 		{
-			Freq_CaptureL = 1000000.0/(65536-Capture_DataL0+Capture_DataL1)*8;
+			Capture_DataL0 = Capture_DataL1;
+			Capture_DataL1 = HAL_TIM_ReadCapturedValue(&htim13,TIM_CHANNEL_1);
+			if (Capture_DataL1<=Capture_DataL0)
+			{
+				Freq_CaptureL = 1000000.0/(65536-Capture_DataL0+Capture_DataL1)*8;
+			}
+			else 
+			{
+				Freq_CaptureL = 1000000.0/(Capture_DataL1-Capture_DataL0)*8;
+			}
 		}
-		else 
-		{
-			Freq_CaptureL = 1000000.0/(Capture_DataL1-Capture_DataL0)*8;
-		}
-	}
 }
 
 	// HAL_TIM_IC_Start_IT(htim,TIM_CHANNEL_1);
