@@ -252,6 +252,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		HAL_UART_Transmit(&huart1, "uart1\n",6,10);
 		//printf("uart");
 }
+void MotorContral();
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
