@@ -51,11 +51,9 @@ uint32_t Capture_DataL1=0;
 
 uint32_t Capture_DataR0=0;
 uint32_t Capture_DataR1=0;
-int flage =0;
+
 float Freq_CaptureL=0.0;
 float Freq_CaptureR=0.0;
-float PWM_Duty=0.0;
-
 
 
 /* USER CODE END 0 */
@@ -78,9 +76,9 @@ void MX_TIM1_Init(void)
   TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig;
 
   htim1.Instance = TIM1;
-  htim1.Init.Prescaler = 83;
+  htim1.Init.Prescaler = 21-1;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 2000-1;
+  htim1.Init.Period = 500-1;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   if (HAL_TIM_Base_Init(&htim1) != HAL_OK)
@@ -217,9 +215,9 @@ void MX_TIM8_Init(void)
   TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig;
 
   htim8.Instance = TIM8;
-  htim8.Init.Prescaler = 83;
+  htim8.Init.Prescaler = 21-1;
   htim8.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim8.Init.Period = 2000-1;
+  htim8.Init.Period = 500-1;
   htim8.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim8.Init.RepetitionCounter = 0;
   if (HAL_TIM_Base_Init(&htim8) != HAL_OK)
@@ -278,9 +276,9 @@ void MX_TIM10_Init(void)
   TIM_OC_InitTypeDef sConfigOC;
 
   htim10.Instance = TIM10;
-  htim10.Init.Prescaler = 84-1;
+  htim10.Init.Prescaler = 21-1;
   htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim10.Init.Period = 2000-1;
+  htim10.Init.Period = 500-1;
   htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   if (HAL_TIM_Base_Init(&htim10) != HAL_OK)
   {
@@ -310,9 +308,9 @@ void MX_TIM11_Init(void)
   TIM_OC_InitTypeDef sConfigOC;
 
   htim11.Instance = TIM11;
-  htim11.Init.Prescaler = 83;
+  htim11.Init.Prescaler = 21-1;
   htim11.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim11.Init.Period = 2000-1;
+  htim11.Init.Period = 500-1;
   htim11.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   if (HAL_TIM_Base_Init(&htim11) != HAL_OK)
   {
@@ -802,19 +800,19 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 	
 	if(htim->Instance==TIM13)
 	{
-		if(htim->Channel==HAL_TIM_ACTIVE_CHANNEL_1)
+	if(htim->Channel==HAL_TIM_ACTIVE_CHANNEL_1)
+	{
+		Capture_DataL0 = Capture_DataL1;
+		Capture_DataL1 = HAL_TIM_ReadCapturedValue(&htim13,TIM_CHANNEL_1);
+		if (Capture_DataL1<=Capture_DataL0)
 		{
-			Capture_DataL0 = Capture_DataL1;
-			Capture_DataL1 = HAL_TIM_ReadCapturedValue(&htim13,TIM_CHANNEL_1);
-			if (Capture_DataL1<=Capture_DataL0)
-			{
-				Freq_CaptureL = 1000000.0/(65536-Capture_DataL0+Capture_DataL1)*8;
-			}
-			else 
-			{
-				Freq_CaptureL = 1000000.0/(Capture_DataL1-Capture_DataL0)*8;
-			}
+			Freq_CaptureL = 1000000.0/(65536-Capture_DataL0+Capture_DataL1)*8;
 		}
+		else 
+		{
+			Freq_CaptureL = 1000000.0/(Capture_DataL1-Capture_DataL0)*8;
+		}
+	}
 }
 
 	// HAL_TIM_IC_Start_IT(htim,TIM_CHANNEL_1);

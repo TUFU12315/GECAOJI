@@ -43,6 +43,8 @@
 #include "usart.h"
 #include "gpio.h"
 
+#define L_setspeed  750
+#define R_setspeed  750
 /* USER CODE BEGIN Includes */
 struct PID
 {
@@ -50,6 +52,7 @@ struct PID
 	float i;
 	float d;
 };
+
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -57,14 +60,13 @@ struct PID
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 uint8_t ReceiveBuff[1];
-uint8_t TxBuff[5]="Start";
-
+uint8_t TxBuff[4]="casd";
+int i=0;
 extern float Freq_CaptureL;
 extern float Freq_CaptureR;
-extern float PWM_Duty;
-struct PID K_motor;
-int L_setspeed = 1000;
-int R_setspeed = 1000;
+struct PID K_motor_L;
+struct PID K_motor_R;
+
 
 int16_t l_out=0,r_out=0;
 
@@ -76,6 +78,8 @@ int r_speed_err0=0;
 int r_speed_err1=0;
 int r_speed_err2=0;
 
+void encode_data();
+void MotorMove(int L_speed,int R_speed);
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -98,9 +102,18 @@ void SystemClock_Config(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-	K_motor.p = 2;
-	K_motor.i = 0.5;
-	K_motor.d = 0.0;
+	K_motor_L.p = 0.766;   
+	K_motor_L.i = 0.3400;
+	K_motor_L.d = 0.005;
+	
+//	K_motor_L.p = 0;   
+//	K_motor_L.i = 0;
+//	K_motor_L.d = 0;
+	
+	K_motor_R.p = 0.75;
+	K_motor_R.i = 0.3;
+	K_motor_R.d = 0.005;
+	
   /* USER CODE END 1 */
 
   /* MCU Configuration----------------------------------------------------------*/
@@ -164,6 +177,7 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
+		
 		
   }
   /* USER CODE END 3 */
@@ -231,7 +245,7 @@ void SystemClock_Config(void)
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 	if(huart->Instance==USART1)
-		HAL_UART_Transmit(&huart1, "uart1_RX\n",7,10);
+		HAL_UART_Transmit(&huart1, "uart1\n",6,10);
 		//printf("uart");
 }
 
@@ -239,76 +253,165 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	if(htim->Instance == TIM3)
 	{
-		//HAL_TIM_IC_Start_IT(&htim13,TIM_CHANNEL_1);
-		//HAL_TIM_IC_Start_IT(&htim14,TIM_CHANNEL_1);
-		//printf("tim3\n");
-		
-		l_speed_err2 = l_speed_err1;
-		l_speed_err1 = l_speed_err0;
-		l_speed_err0 = L_setspeed - Freq_CaptureR;
-		
-		r_speed_err2 = r_speed_err1;
-		r_speed_err1 = r_speed_err0;
-		r_speed_err0 = R_setspeed - Freq_CaptureL;
-		
-	  l_out+=K_motor.p*(l_speed_err0-l_speed_err1)+K_motor.i*l_speed_err0+K_motor.d*(l_speed_err0-2*l_speed_err1+l_speed_err2);
-		r_out+=K_motor.p*(r_speed_err0-r_speed_err1)+K_motor.i*r_speed_err0+K_motor.d*(r_speed_err0-2*r_speed_err1+r_speed_err2);
-//		if(l_out < 0)
-//		{
-//			__HAL_TIM_SetCompare(&htim10,TIM_CHANNEL_1,0);
-//			__HAL_TIM_SetCompare(&htim1,TIM_CHANNEL_1,0);	
-//		}
-//		else
-//		{
-//			__HAL_TIM_SetCompare(&htim10,TIM_CHANNEL_1,0);
-//			__HAL_TIM_SetCompare(&htim1,TIM_CHANNEL_1,l_out);
-//		}
-////		else if (l_out >=htim1.Init.Period)
-////			l_out = htim1.Init.Period;
-//		
-//		if(r_out < 0)
-//		{
-//			r_out=0;
-//			__HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_1,0);
-//			__HAL_TIM_SetCompare(&htim11,TIM_CHANNEL_1,0);
-//		}
-//		else
-//		{
-//			__HAL_TIM_SetCompare(&htim11,TIM_CHANNEL_1,0);
-//			__HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_1,r_out);
-//		}
-//		else if (r_out >=htim1.Init.Period)
-//			r_out = htim8.Init.Period;
-			
-		if(l_out<0)
-			l_out=0;
-		if(r_out<0)
-			r_out=0;
-		if(r_out > htim1.Init.Period)
-			r_out = htim1.Init.Period;
-		if(l_out > htim8.Init.Period)
-			l_out = htim8.Init.Period;
-		
-		__HAL_TIM_SetCompare(&htim1,TIM_CHANNEL_1,l_out);
-		__HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_1,r_out);
-		
-		//if(abs(Freq_CaptureL-Freq_CaptureR)>200)
-		printf("l_out: %d %d\n",(int16_t)Freq_CaptureR,(int16_t)Freq_CaptureL);	
-		//printf("r_out: %d %d\n",(int16_t)l_out,(int16_t)Freq_CaptureR);	
-		
-		
-		/**************************/
+		MotorMove(L_setspeed,R_setspeed);
+		encode_data();
 		Freq_CaptureL=0;
 		Freq_CaptureR=0;
-		/**************************/
-		
-		
-		//HAL_TIM_IC_Stop_IT(&htim13,TIM_CHANNEL_1);
-		//HAL_TIM_IC_Stop_IT(&htim14,TIM_CHANNEL_1);
+//		//HAL_TIM_IC_Start_IT(&htim13,TIM_CHANNEL_1);
+//		//HAL_TIM_IC_Start_IT(&htim14,TIM_CHANNEL_1);
+//		
+//		//printf("tim3\n");
+//		l_speed_err2 = l_speed_err1;
+//		l_speed_err1 = l_speed_err0;
+//		l_speed_err0 = L_setspeed - (int)Freq_CaptureL;
+//		
+//		r_speed_err2 = r_speed_err1;
+//		r_speed_err1 = r_speed_err0;
+//		r_speed_err0 = R_setspeed - (int)Freq_CaptureR;
+//		
+//	    l_out+=K_motor_L.p*(l_speed_err0-l_speed_err1)+K_motor_L.i*l_speed_err0+K_motor_L.d*(l_speed_err0-2*l_speed_err1+l_speed_err2);
+//		r_out+=K_motor_R.p*(r_speed_err0-r_speed_err1)+K_motor_R.i*r_speed_err0+K_motor_R.d*(r_speed_err0-2*r_speed_err1+r_speed_err2);
+
+//			
+//		if(l_out<0)l_out=0;
+//		if(r_out<0)r_out=0;
+//		if(l_out>htim1.Init.Period)  l_out = htim1.Init.Period;
+//		if(r_out>htim8.Init.Period)  r_out = htim8.Init.Period;
+//		
+//		
+//		__HAL_TIM_SetCompare(&htim1,TIM_CHANNEL_1,r_out);
+//		__HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_1,l_out);
+//		
+//		encode_data();
+////		printf("0x030xFC,%d%x%x",0x03,0xFC,(uint16_t)Freq_CaptureL,0xFC,0x03);
+////		printf("%x%x",0x03,0xFC);
+////		printf("%d",(uint16_t)Freq_CaptureL);
+////		printf("%x%x",0xFC,0x03);
+//		//if(abs(Freq_CaptureL-Freq_CaptureR)>200)
+//		//printf("l_out: %d %d\n",(int16_t)Freq_CaptureR,(int16_t)Freq_CaptureL);	
+//		//printf("r_out: %d %d\n",(int16_t)l_out,(int16_t)Freq_CaptureR);	
+//		
+//		//HAL_UART_Transmit(&huart1,data_code,DATA_CODE_LEN,100);
+//		Freq_CaptureL=0;
+//		Freq_CaptureR=0;
+//		//HAL_TIM_IC_Stop_IT(&htim13,TIM_CHANNEL_1);
+//		//HAL_TIM_IC_Stop_IT(&htim14,TIM_CHANNEL_1);
+//		//encode_data();
 	}
 }
 
+#define DATA_CODE_LEN 12
+uint8_t data_code[DATA_CODE_LEN + 1];
 
+void encode(uint8_t size, int data, uint8_t * index)
+{
+	#ifdef DEBUG_MODE
+	ASSERT(* index + size <= DATA_CODE_LEN);
+	#else
+	if(* index + size > DATA_CODE_LEN)
+	{
+		return;
+	}
+	#endif
+
+	switch (size)
+	{
+	case 1:
+		data_code[* index] = data;
+		break;
+	case 2:
+		data_code[* index+1] = data >> 8;
+		data_code[* index] = data & 255;
+		break;
+	default:
+		break;
+	}
+	* index += size;
+}
+
+//function name:		encode_data()
+//function description:	encode datas and send to master
+//parameters:			none
+//return values:		none
+void encode_data()
+{
+	//int i;
+	uint8_t index = 0;
+	encode(1, (uint8_t)3,&index);
+	encode(1,(uint8_t)~3,&index);
+	
+	encode(2, (uint16_t)Freq_CaptureL, &index);
+	encode(2, (uint16_t)Freq_CaptureR, &index);
+	encode(2, l_out, &index);
+	encode(2, r_out, &index);
+	
+	encode(1,(uint8_t)~3,&index);
+	encode(1,(uint8_t)3,&index);
+	/*encode(2, direction, & index);
+	for (i = 0; i < 6; i ++)
+	{
+		encode(2, normalized_ad[i], & index);
+	}
+*/
+	//printf("%d",sizeof(uint8_t));
+	HAL_UART_Transmit(&huart1,data_code,DATA_CODE_LEN,100);
+	//uart_putbuff(UART0, data_code, DATA_CODE_LEN + 1);
+}
+void MotorMove(int L_speed,int R_speed)
+{
+	int L_dir = 0,R_dir=0;
+	if(L_speed>=0) L_dir = 1;	//左正转
+	else 						//左反转
+	{
+		L_dir = 0;
+		L_speed = -L_speed;
+	}
+	
+	if(R_speed>=0) R_dir = 1;	//右正转
+	else 						//右反转
+	{
+		R_dir = 0;
+		R_speed = -R_speed;
+	}
+	
+	l_speed_err2 = l_speed_err1;
+	l_speed_err1 = l_speed_err0;
+	l_speed_err0 = L_speed - (int)Freq_CaptureL;
+		
+	r_speed_err2 = r_speed_err1;
+	r_speed_err1 = r_speed_err0;
+	r_speed_err0 = R_speed - (int)Freq_CaptureR;
+		
+	l_out+=K_motor_L.p*(l_speed_err0-l_speed_err1)+K_motor_L.i*l_speed_err0+K_motor_L.d*(l_speed_err0-2*l_speed_err1+l_speed_err2);
+	r_out+=K_motor_R.p*(r_speed_err0-r_speed_err1)+K_motor_R.i*r_speed_err0+K_motor_R.d*(r_speed_err0-2*r_speed_err1+r_speed_err2);
+
+			
+	if(l_out<0)l_out=0;
+	if(r_out<0)r_out=0;
+	if(l_out>htim1.Init.Period)  l_out = htim1.Init.Period;
+	if(r_out>htim8.Init.Period)  r_out = htim8.Init.Period;
+		
+	if(L_dir)	
+	{
+		__HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_1,l_out);
+		__HAL_TIM_SetCompare(&htim11,TIM_CHANNEL_1,0);
+	}
+	else
+	{
+		__HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_1,0);
+		__HAL_TIM_SetCompare(&htim11,TIM_CHANNEL_1,l_out);
+	}
+	if(R_dir)
+	{
+		__HAL_TIM_SetCompare(&htim1,TIM_CHANNEL_1,r_out);
+		__HAL_TIM_SetCompare(&htim10,TIM_CHANNEL_1,0);
+	}
+	else
+	{
+		__HAL_TIM_SetCompare(&htim1,TIM_CHANNEL_1,0);
+		__HAL_TIM_SetCompare(&htim10,TIM_CHANNEL_1,r_out);
+	}		
+}
 
 
 /* USER CODE END 4 */
